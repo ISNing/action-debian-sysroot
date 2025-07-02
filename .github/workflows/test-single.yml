@@ -1,0 +1,101 @@
+name: Sysroot Build & Validation Test for a Single target
+
+on:
+  workflow_call:
+    inputs:
+      target_arch:
+        description: 'Target architecture (e.g. arm64, amd64, x86_64)'
+        required: true
+        type: string
+
+      distro:
+        description: 'Target distribution (e.g. debian/bullseye, alpine/v3.18)'
+        required: true
+        type: string
+
+      mirror_url:
+        description: 'Custom mirror URL (optional)'
+        required: false
+        type: string
+        default: ''
+
+      sysroot_path:
+        description: 'Output sysroot path'
+        required: false
+        type: string
+        default: './sysroot'
+
+      additional_packages:
+        description: 'Comma-separated list of additional packages to install'
+        required: false
+        type: string
+        default: ''
+
+      docker_image:
+        description: 'Docker image to use as job container (optional, auto-detect if empty)'
+        required: false
+        type: string
+        default: ''
+
+      artifact_name:
+        description: 'Fully custom artifact name (optional, overrides prefix/postfix)'
+        required: false
+        type: string
+        default: ''
+
+      artifact_prefix:
+        description: 'Artifact name prefix (optional)'
+        required: false
+        type: string
+        default: 'sysroot'
+
+      artifact_postfix:
+        description: 'Artifact name postfix (optional)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build-sysroot:
+    uses: ./.github/workflows/build-sysroot.yml
+    with:
+      target_arch: ${{ inputs.target_arch }}
+      distro: ${{ inputs.distro }}
+      mirror_url: ${{ inputs.mirror_url }}
+      sysroot_path: ${{ inputs.sysroot_path }}
+      additional_packages: ${{ inputs.additional_packages }}
+      docker_image: ${{ inputs.docker_image }}
+      artifact_name: ${{ inputs.artifact_name }}
+      artifact_prefix: ${{ inputs.artifact_prefix }}
+      artifact_postfix: ${{ inputs.artifact_postfix }}
+
+  validate-artifact:
+    needs: build-sysroot
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download sysroot artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-sysroot.outputs.artifact_name }}
+          path: ./sysroot
+
+      - name: Validate sysroot contents (check libc)
+        shell: bash
+        run: |
+          SYSROOT=./sysroot
+          if [[ "${{ inputs.distro }}" == alpine/* ]]; then
+            if [ -f "$SYSROOT/lib/libc.musl-x86_64.so.1" ] || [ -f "$SYSROOT/lib/libc.musl-aarch64.so.1" ]; then
+              echo "✅ Musl libc found, validation passed."
+            else
+              echo "❌ ERROR: Musl libc not found in sysroot!"
+              exit 1
+            fi
+          else
+            if [ -f "$SYSROOT/lib/x86_64-linux-gnu/libc.so.6" ] || [ -f "$SYSROOT/lib/aarch64-linux-gnu/libc.so.6" ] || [ -f "$SYSROOT/lib/libc.so.6" ]; then
+              echo "✅ glibc found, validation passed."
+            else
+              echo "❌ ERROR: glibc libc.so.6 not found in sysroot!"
+              exit 1
+            fi
+          fi

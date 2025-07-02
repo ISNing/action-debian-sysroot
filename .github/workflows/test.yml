@@ -1,0 +1,23 @@
+name: Sysroot Build & Validation Test
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-validate:
+    strategy:
+      matrix:
+        params:
+          - { arch: amd64, distro: debian/bullseye, add_pkg: "libc6-dev,gcc" }
+          - { arch: arm64, distro: ubuntu/focal, add_pkg: "libc6-dev,gcc" }
+          - { arch: x86_64, distro: alpine/v3.18, add_pkg: "" }
+    uses: ./.github/workflows/test-single.yml
+    with:
+      target_arch: ${{ matrix.params.arch }}
+      distro: ${{ matrix.params.distro }}
+      additional_packages: ${{ matrix.params.add_pkg }}
+      artifact_prefix: test-sysroot-
+      artifact_postfix:
