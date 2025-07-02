@@ -44,7 +44,7 @@ jobs:
           - amd64
         distro:
           - alpine/latest-stable
-    uses: ./.github/workflows/test-single.yml
+    uses: ./.github/workflows/build-sysroot.yml
     with:
       target_arch: ${{ matrix.arch }}
       distro: ${{ matrix.distro }}
