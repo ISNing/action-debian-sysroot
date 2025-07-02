@@ -20,7 +20,6 @@ jobs:
           - { distro: debian/buster, mirror: "http://archive.debian.org/debian" }
           - { distro: debian/stretch, mirror: "http://archive.debian.org/debian" }
           - { distro: debian/jessie, mirror: "http://archive.debian.org/debian" }
-          - { distro: debian/wheezy, mirror: "http://archive.debian.org/debian" }
           - { distro: ubuntu/noble, mirror: "" }
           - { distro: ubuntu/jammy, mirror: "" }
           - { distro: ubuntu/focal, mirror: "" }
