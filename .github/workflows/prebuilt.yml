@@ -13,25 +13,25 @@ jobs:
           - arm64
           - amd64
         distro:
-          - debian/unstable
-          - debian/sid
-          - debian/bookworm
-          - debian/bullseye
-          - debian/buster
-          - debian/stretch
-          - debian/jessie
-          - debian/wheezy
-          - ubuntu/noble
-          - ubuntu/jammy
-          - ubuntu/focal
-          - ubuntu/bionic
-          - ubuntu/xenial
-          - ubuntu/trusty
-          - alpine/latest-stable
-    uses: ./.github/workflows/test-single.yml
+          - { distro: debian/unstable, mirror: "" }
+          - { distro: debian/sid, mirror: "" }
+          - { distro: debian/bookworm, mirror: "" }
+          - { distro: debian/bullseye, mirror: "http://archive.debian.org/debian" }
+          - { distro: debian/buster, mirror: "http://archive.debian.org/debian" }
+          - { distro: debian/stretch, mirror: "http://archive.debian.org/debian" }
+          - { distro: debian/jessie, mirror: "http://archive.debian.org/debian" }
+          - { distro: debian/wheezy, mirror: "http://archive.debian.org/debian" }
+          - { distro: ubuntu/noble, mirror: "" }
+          - { distro: ubuntu/jammy, mirror: "" }
+          - { distro: ubuntu/focal, mirror: "" }
+          - { distro: ubuntu/bionic, mirror: "" }
+          - { distro: ubuntu/xenial, mirror: "" }
+          - { distro: ubuntu/trusty, mirror: "" }
+    uses: ./.github/workflows/build-sysroot.yml
     with:
       target_arch: ${{ matrix.arch }}
-      distro: ${{ matrix.distro }}
+      distro: ${{ matrix.distro.distro }}
+      mirror_url: ${{ matrix.distro.mirror }}
       additional_packages: "libc6-dev,gcc"
       artifact_prefix: sysroot-
       artifact_postfix:
@@ -43,11 +43,12 @@ jobs:
           - arm64
           - amd64
         distro:
-          - alpine/latest-stable
+          - { distro: alpine/latest-stable, mirror: "" }
     uses: ./.github/workflows/build-sysroot.yml
     with:
       target_arch: ${{ matrix.arch }}
-      distro: ${{ matrix.distro }}
+      distro: ${{ matrix.distro.distro }}
+      mirror_url: ${{ matrix.distro.mirror }}
       additional_packages: gcc
       artifact_prefix: sysroot-
       artifact_postfix:
