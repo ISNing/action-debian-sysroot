@@ -40,8 +40,8 @@ jobs:
     strategy:
       matrix:
         arch:
-          - arm64
-          - amd64
+          - aarch64
+          - x86_64
         distro:
           - { distro: alpine/latest-stable, mirror: "" }
     uses: ./.github/workflows/build-sysroot.yml
