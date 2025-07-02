@@ -54,6 +54,8 @@ jobs:
     
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Get date
         run: echo "DATE=$(date +"%YYYY%mm%dd")" >> $GITHUB_ENV
