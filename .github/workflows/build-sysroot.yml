@@ -80,7 +80,7 @@ jobs:
               debian/*)
                 IMAGE="debian:latest";;
               ubuntu/*)
-                IMAGE="debian:latest";;
+                IMAGE="ubuntu:latest";;
               alpine/*)
                 IMAGE="${DISTRO/\/*/:latest}";;
               *)
