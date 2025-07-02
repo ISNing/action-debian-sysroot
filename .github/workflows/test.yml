@@ -20,4 +20,3 @@ jobs:
       distro: ${{ matrix.params.distro }}
       additional_packages: ${{ matrix.params.add_pkg }}
       artifact_prefix: test-sysroot-
-      artifact_postfix:

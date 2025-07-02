@@ -47,7 +47,7 @@ on:
         description: 'Artifact name postfix (optional)'
         required: false
         type: string
-        default: ''
+        default: '.tar.gz'
 
 jobs:
   build-sysroot:
@@ -71,7 +71,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build-sysroot.outputs.artifact_name }}
-          path: ./sysroot
+
+      - name: Extract sysroot artifact
+        shell: bash
+        run: |
+          mkdir sysroot
+          tar xzvf ${{ needs.build-sysroot.outputs.artifact_name }} -C ./sysroot
 
       - name: Validate sysroot contents (check libc)
         shell: bash

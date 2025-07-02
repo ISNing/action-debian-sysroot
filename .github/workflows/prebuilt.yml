@@ -33,7 +33,6 @@ jobs:
       mirror_url: ${{ matrix.distro.mirror }}
       additional_packages: "libc6-dev,gcc"
       artifact_prefix: sysroot-
-      artifact_postfix:
 
   build-alpine:
     strategy:
@@ -50,7 +49,6 @@ jobs:
       mirror_url: ${{ matrix.distro.mirror }}
       additional_packages: gcc
       artifact_prefix: sysroot-
-      artifact_postfix:
 
   release:
     runs-on: ubuntu-latest
@@ -61,13 +59,16 @@ jobs:
       - build-alpine
     steps:
       - name: Get date
-        run: echo "DATE=$(date +"%YYYY%mm%dd")" >> $GITHUB_ENV
+        run: echo "DATE=$(date +"%Y%m%d")" >> $GITHUB_ENV
+
       - name: Download sysroot artifact
         uses: actions/download-artifact@v4
         with:
-          path: ./sysroot
+          path: sysroot
+          merge-multiple: true
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{env.DATE}}
-          files: ./sysroot/*
+          files: sysroot/*

@@ -47,7 +47,43 @@ on:
         description: 'Artifact name postfix (optional)'
         required: false
         type: string
-        default: ''
+        default: '.tar.gz'
+
+      exclude:
+        description: 'Files/Directories to be excluded from compressing (optional)'
+        required: false
+        type: string
+        default: 'dev proc var home root run sys tmp'
+
+      apk_static_url:
+        description: 'Custom apk.static binary url (optional, required for alpine targets)'
+        required: false
+        type: string
+        default: 'https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v2.14.10/x86_64/apk.static'
+
+      ignore_cache:
+        description: 'Whether to ignore cache'
+        required: false
+        type: boolean
+        default: false
+
+      enable_cache:
+        description: 'Whether to enable cache'
+        required: false
+        type: boolean
+        default: true
+
+      restore_key:
+        description: 'Custom restore key pattern'
+        required: false
+        type: string
+        default: 'sysroot-${ARCH}-${SAFE_DISTRO}-${SAFE_ADDPKG}-${SAFE_EXCLUDE}'
+
+      cache_key:
+        description: 'Custom cache key pattern'
+        required: false
+        type: string
+        default: '${RESTORE_KEY}-$(date +"%Y%m%d")'
 
     outputs:
       artifact_name:
@@ -58,77 +94,68 @@ jobs:
   build-sysroot:
     runs-on: ubuntu-latest
 
+    env:
+      ARCH: ${{ inputs.target_arch }}
+      DISTRO: ${{ inputs.distro }}
+      ADDPKG: ${{ inputs.additional_packages }}
+      SYSROOT: ${{ inputs.sysroot_path }}
+      MIRROR: ${{ inputs.mirror_url }}
+      EXCLUDE: ${{ inputs.exclude }}
+
+    defaults:
+      run:
+        shell: bash
+
     outputs:
       artifact_name: ${{ steps.set-artifact-name.outputs.artifact_name }}
 
     steps:
-      - name: Install required tools
-        shell: sh
-        run: sudo apt-get update && sudo apt-get install -y bash tar
+      - name: Prepare environment variables required
+        id: init-env
+        run: |
+          DISTRO_VER="${DISTRO#*/}"
+          SAFE_DISTRO="${DISTRO//\//_}"
+          SAFE_ADDPKG="${ADDPKG//,/_}"
+          SAFE_EXCLUDE="${EXCLUDE// /_}"
+
+          echo "DISTRO_VER=$DISTRO_VER" >> $GITHUB_ENV
+          echo "SAFE_DISTRO=$SAFE_DISTRO" >> $GITHUB_ENV
+          echo "SAFE_ADDPKG=$SAFE_ADDPKG" >> $GITHUB_ENV
+          echo "SAFE_EXCLUDE=$SAFE_EXCLUDE" >> $GITHUB_ENV
 
       - name: Generate Cache Key
         id: cache-key
-        shell: bash
         run: |
-          ARCH="${{ inputs.target_arch }}"
-          DISTRO="${{ inputs.distro }}"
-          ADDPKG="${{ inputs.additional_packages }}"
-
-          SAFE_DISTRO=${DISTRO//\//_}
-          SAFE_ADDPKG=${ADDPKG//,/_}
-
-          SAFE_CACHE_KEY="sysroot-${ARCH}-${SAFE_DISTRO}-${SAFE_ADDPKG}"
-
-          echo "cache_key=$SAFE_CACHE_KEY" >> $GITHUB_OUTPUT
+          RESTORE_KEY=${{ inputs.restore_key }}
+          CACHE_KEY=${{ inputs.cache_key }}
+          echo "CACHE_KEY=$CACHE_KEY" >> $GITHUB_ENV
+          echo "RESTORE_KEY=$RESTORE_KEY" >> $GITHUB_ENV
+          echo "cache_key=$CACHE_KEY" >> $GITHUB_OUTPUT
+          echo "restore_key=$RESTORE_KEY" >> $GITHUB_OUTPUT
 
       - name: Restore sysroot from cache
         id: cache
         uses: actions/cache@v4
+        if: inputs.enable_cache
         with:
           path: ${{ inputs.sysroot_path }}
           key: ${{ steps.cache-key.outputs.cache_key }}
-
-      - name: Check if sysroot exists
-        id: sysroot-check
-        shell: bash
-        run: |
-          if [ -d "${{ inputs.sysroot_path }}/bin" ]; then
-            echo "Sysroot already exists. Skipping build."
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install QEMU for cross-arch
-        if: steps.sysroot-check.outputs.exists == 'false'
-        shell: sh
-        run: sudo apt-get update && sudo apt-get install -y qemu-user-static binfmt-support
-
-      - name: Register QEMU
-        if: steps.sysroot-check.outputs.exists == 'false'
-        shell: bash
-        run: |
-          update-binfmts --enable qemu-arm || true
-          update-binfmts --enable qemu-aarch64 || true
+          lookup-only: ${{ inputs.ignore_cache }}
+          restore-keys: ${{ steps.cache-key.outputs.restore_key }}
 
       - name: Set default mirror URL
         id: set_mirror
-        if: steps.sysroot-check.outputs.exists == 'false'
-        shell: bash
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          MIRROR="${{ inputs.mirror_url }}"
-          DISTRO="${{ inputs.distro }}"
-          ARCH="${{ inputs.target_arch }}"
-
           if [ -z "$MIRROR" ]; then
             case "$DISTRO" in
               debian/*)
                 MIRROR="http://deb.debian.org/debian";;
               ubuntu/*)
                 if [[ "$ARCH" == "amd64" || "$ARCH" == "i386" ]]; then
-                  MIRROR="http://archive.ubuntu.com/ubuntu"
+                  MIRROR="http://azure.archive.ubuntu.com/ubuntu"
                 else
-                  MIRROR="http://ports.ubuntu.com/ubuntu-ports"
+                  MIRROR="http://azure.ports.ubuntu.com/ubuntu-ports"
                 fi;;
               alpine/*)
                 MIRROR="http://dl-cdn.alpinelinux.org/alpine/${DISTRO#alpine/}/main";;
@@ -137,67 +164,73 @@ jobs:
                 exit 1;;
             esac
           fi
+
+          echo "MIRROR=$MIRROR" >> $GITHUB_ENV
           echo "mirror_url=$MIRROR" >> $GITHUB_OUTPUT
 
-      - name: Install required tools
-        if: steps.sysroot-check.outputs.exists == 'false'
-        shell: sh
-        run: sudo apt-get update && sudo apt-get install -y debootstrap
+      - name: apt-get update
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' }}
+        run: sudo apt-get update
 
-      - name: Bootstrap sysroot
-        if: steps.sysroot-check.outputs.exists == 'false'
-        shell: bash
+      - name: Prepare required tools for debian targets
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true'  && ! startsWith(inputs.distro, 'alpine')}}
+        run: sudo apt-get install -y debootstrap tar
+
+      - name: Prepare required tools for alpine targets
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true'  && startsWith(inputs.distro, 'alpine')}}
+        working-directory: /tmp
         run: |
-          ARCH="${{ inputs.target_arch }}"
-          DISTRO="${{ inputs.distro }}"
-          SYSROOT="$(realpath ${{ inputs.sysroot_path }})"
-          MIRROR="${{ steps.set_mirror.outputs.mirror_url }}"
-          ADDPKGS="${{ inputs.additional_packages }}"
-          DISTRO_VER="${DISTRO#*/}"
+          sudo wget -O /bin/apk ${{ inputs.apk_static_url }}
+          sudo chmod a+x /bin/apk
 
+      - name: Prepare bootstrapping sysroot
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' }}
+        run: |
           mkdir -p "$SYSROOT"
 
-          if [[ "$DISTRO" == alpine/* ]]; then
-            BASE_URL="$MIRROR"
-            wget https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v2.14.6/x86_64/apk.static
-
-            ./apk.static --no-scripts -U --allow-untrusted -X ${BASE_URL} --arch $ARCH --root $SYSROOT --initdb add alpine-base
-
-            if [ -n "$ADDPKGS" ]; then
-              ./apk.static --no-scripts -U --allow-untrusted -X ${BASE_URL} --arch $ARCH --root $SYSROOT add $(echo "$ADDPKGS" | tr ',' ' ')
-            fi
+      - name: Bootstrap sysroot (debian targets)
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true'  && ! startsWith(inputs.distro, 'alpine')}}
+        run: |
+          if [ -n "$ADDPKGS" ]; then
+            sudo debootstrap --no-check-gpg --foreign --arch=$ARCH --include=$ADDPKGS $DISTRO_VER $SYSROOT $MIRROR
           else
-            if [ -n "$ADDPKGS" ]; then
-              debootstrap --no-check-gpg --foreign --arch=$ARCH --include=$ADDPKGS $DISTRO_VER $SYSROOT $MIRROR
-            else
-              debootstrap --no-check-gpg --foreign --arch=$ARCH $DISTRO_VER $SYSROOT $MIRROR
-            fi
+            sudo debootstrap --no-check-gpg --foreign --arch=$ARCH $DISTRO_VER $SYSROOT $MIRROR
           fi
+
+      - name: Bootstrap sysroot (alpine targets)
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' && startsWith(inputs.distro, 'alpine')}}
+        run: |
+          apk --no-scripts -U --allow-untrusted -X ${MIRROR} --arch $ARCH --root $SYSROOT --initdb add alpine-base
+
+          if [ -n "$ADDPKGS" ]; then
+            apk --no-scripts -U --allow-untrusted -X ${BASMIRRORE_URL} --arch $ARCH --root $SYSROOT add $(echo "$ADDPKGS" | tr ',' ' ')
+          fi
+
+      - name: Remove unused directories
+        working-directory: ${{ inputs.sysroot_path }}
+        run: sudo rm -rf $EXCLUDE
+
+      - name: Mark all sysroot artifact readable for everyone
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' }}
+        run: sudo chmod a+r -R ${{ inputs.sysroot_path }}
 
       - name: Determine Artifact Name
         id: set-artifact-name
-        shell: bash
         run: |
-          ARCH="${{ inputs.target_arch }}"
-          DISTRO="${{ inputs.distro }}"
-          ADDPKG="${{ inputs.additional_packages }}"
-
-          SAFE_DISTRO=${DISTRO//\//_}
-          SAFE_ADDPKG=${ADDPKG//,/_}
-
           if [ -n "${{ inputs.artifact_name }}" ]; then
             ARTIFACT_NAME="${{ inputs.artifact_name }}"
           else
             ARTIFACT_NAME="${{ inputs.artifact_prefix }}$ARCH-$SAFE_DISTRO${{ inputs.artifact_postfix }}"
           fi
 
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> $GITHUB_ENV
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Compress sysroot artifact
+        run: tar czvf "${{ steps.set-artifact-name.outputs.artifact_name }}" -C "$(realpath ${{ inputs.sysroot_path }})" $(ls ${{ inputs.sysroot_path }})
 
       - name: Upload sysroot artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact_name }}
-          path: |
-            ${{ inputs.sysroot_path }}
-            !${{ inputs.sysroot_path }}/dev
-            !${{ inputs.sysroot_path }}/proc
+          path: ${{ steps.set-artifact-name.outputs.artifact_name }}
