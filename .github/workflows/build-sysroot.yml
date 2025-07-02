@@ -64,7 +64,7 @@ jobs:
     steps:
       - name: Install required tools
         shell: sh
-        run: apt-get update && apt-get install -y bash tar
+        run: sudo apt-get update && sudo apt-get install -y bash tar
 
       - name: Generate Cache Key
         id: cache-key
@@ -102,7 +102,7 @@ jobs:
       - name: Install QEMU for cross-arch
         if: steps.sysroot-check.outputs.exists == 'false'
         shell: sh
-        run: apt-get update && apt-get install -y qemu-user-static binfmt-support
+        run: sudo apt-get update && sudo apt-get install -y qemu-user-static binfmt-support
 
       - name: Register QEMU
         if: steps.sysroot-check.outputs.exists == 'false'
@@ -142,7 +142,7 @@ jobs:
       - name: Install required tools
         if: steps.sysroot-check.outputs.exists == 'false'
         shell: sh
-        run: apt-get update && apt-get install -y debootstrap
+        run: sudo apt-get update && sudo apt-get install -y debootstrap
 
       - name: Bootstrap sysroot
         if: steps.sysroot-check.outputs.exists == 'false'
