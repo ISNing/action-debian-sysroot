@@ -102,15 +102,15 @@ jobs:
       artifact_name: ${{ steps.set-artifact-name.outputs.artifact_name }}
 
     steps:
-      - name: Install required tools
+      - name: Install required tools (for alpine)
+        if: ${{ startsWith(inputs.distro, 'alpine') }}
         shell: sh
-        run: |
-          DISTRO="${{ inputs.distro }}"
-          if [[ "$DISTRO" == alpine/* ]]; then
-            apk add --no-cache bash tar
-          else
-            apt-get update && apt-get install -y bash
-          fi
+        run: apk add --no-cache bash tar
+
+      - name: Install required tools (for debian)
+        if: ${{ ! startsWith(inputs.distro, 'alpine') }}
+        shell: sh
+        run: apt-get update && apt-get install -y bash tar
 
       - name: Generate Cache Key
         id: cache-key
