@@ -1,0 +1,68 @@
+name: Prebuild Sysroot
+
+on:
+  schedule:
+    - cron: 0 0 1 * *
+  workflow_dispatch:
+
+jobs:
+  build-debian:
+    strategy:
+      matrix:
+        arch:
+          - arm64
+          - amd64
+        distro:
+          - debian/unstable
+          - debian/sid
+          - debian/bookworm
+          - debian/bullseye
+          - debian/buster
+          - debian/stretch
+          - debian/jessie
+          - debian/wheezy
+          - ubuntu/noble
+          - ubuntu/jammy
+          - ubuntu/focal
+          - ubuntu/bionic
+          - ubuntu/xenial
+          - ubuntu/trusty
+          - alpine/latest-stable
+    uses: ./.github/workflows/test-single.yml
+    with:
+      target_arch: ${{ matrix.arch }}
+      distro: ${{ matrix.distro }}
+      additional_packages: "libc6-dev,gcc"
+      artifact_prefix: sysroot-
+      artifact_postfix:
+
+  build-alpine:
+    strategy:
+      matrix:
+        arch:
+          - arm64
+          - amd64
+        distro:
+          - alpine/latest-stable
+    uses: ./.github/workflows/test-single.yml
+    with:
+      target_arch: ${{ matrix.arch }}
+      distro: ${{ matrix.distro }}
+      additional_packages: gcc
+      artifact_prefix: sysroot-
+      artifact_postfix:
+    
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get date
+        run: echo "DATE=$(date +"%YYYY%mm%dd")" >> $GITHUB_ENV
+      - name: Download sysroot artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: ./sysroot
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{env.DATE}}
+          files: ./sysroot/*
