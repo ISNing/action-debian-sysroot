@@ -82,7 +82,7 @@ jobs:
               ubuntu/*)
                 IMAGE="${DISTRO/\/*/:latest}";;
               alpine/*)
-                IMAGE="${DISTRO/\/v/:}";;
+                IMAGE="${DISTRO/\/*/:latest}";;
               *)
                 echo "Unsupported distro for auto image, please provide docker_image explicitly."
                 exit 1;;
