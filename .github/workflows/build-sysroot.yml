@@ -219,10 +219,10 @@ jobs:
 
           if [[ "$DISTRO" == alpine/* ]]; then
             BASE_URL="$MIRROR"
-            apk -U --allow-untrusted -X ${BASE_URL} --arch $ARCH --root $SYSROOT --initdb add alpine-base
+            apk --no-scripts -U --allow-untrusted -X ${BASE_URL} --arch $ARCH --root $SYSROOT --initdb add alpine-base
 
             if [ -n "$ADDPKGS" ]; then
-              apk -U --allow-untrusted -X ${BASE_URL} --arch $ARCH --root $SYSROOT add $(echo "$ADDPKGS" | tr ',' ' ')
+              apk --no-scripts -U --allow-untrusted -X ${BASE_URL} --arch $ARCH --root $SYSROOT add $(echo "$ADDPKGS" | tr ',' ' ')
             fi
           else
             if [ -n "$ADDPKGS" ]; then
