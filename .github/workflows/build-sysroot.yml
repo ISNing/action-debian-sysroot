@@ -226,9 +226,9 @@ jobs:
             fi
           else
             if [ -n "$ADDPKGS" ]; then
-              debootstrap --foreign --arch=$ARCH --include=$ADDPKGS $DISTRO_VER $SYSROOT $MIRROR
+              debootstrap --no-check-gpg --foreign --arch=$ARCH --include=$ADDPKGS $DISTRO_VER $SYSROOT $MIRROR
             else
-              debootstrap --foreign --arch=$ARCH $DISTRO_VER $SYSROOT $MIRROR
+              debootstrap --no-check-gpg --foreign --arch=$ARCH $DISTRO_VER $SYSROOT $MIRROR
             fi
           fi
 
