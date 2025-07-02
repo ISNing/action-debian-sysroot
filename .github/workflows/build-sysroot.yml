@@ -78,9 +78,9 @@ jobs:
           if [ -z "$IMAGE" ]; then
             case "$DISTRO" in
               debian/*)
-                IMAGE="${DISTRO/\//:}";;
+                IMAGE="${DISTRO/\/*/:latest}";;
               ubuntu/*)
-                IMAGE="${DISTRO/\//:}";;
+                IMAGE="${DISTRO/\/*/:latest}";;
               alpine/*)
                 IMAGE="${DISTRO/\/v/:}";;
               *)
