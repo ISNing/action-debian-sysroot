@@ -51,7 +51,7 @@ jobs:
       additional_packages: gcc
       artifact_prefix: sysroot-
       artifact_postfix:
-    
+
   release:
     runs-on: ubuntu-latest
     permissions:

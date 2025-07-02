@@ -31,12 +31,6 @@ on:
         type: string
         default: ''
 
-      docker_image:
-        description: 'Docker image to use as job container (optional, auto-detect if empty)'
-        required: false
-        type: string
-        default: ''
-
       artifact_name:
         description: 'Fully custom artifact name (optional, overrides prefix/postfix)'
         required: false
@@ -64,7 +58,6 @@ jobs:
       mirror_url: ${{ inputs.mirror_url }}
       sysroot_path: ${{ inputs.sysroot_path }}
       additional_packages: ${{ inputs.additional_packages }}
-      docker_image: ${{ inputs.docker_image }}
       artifact_name: ${{ inputs.artifact_name }}
       artifact_prefix: ${{ inputs.artifact_prefix }}
       artifact_postfix: ${{ inputs.artifact_postfix }}
