@@ -172,6 +172,10 @@ jobs:
         if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' }}
         run: sudo apt-get update
 
+      - name: Prepare for QEMU user mode emulator
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' }}
+        run: sudo apt-get install -y qemu-user-static
+
       - name: Prepare required tools for debian targets
         if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true'  && ! startsWith(inputs.distro, 'alpine')}}
         run: sudo apt-get install -y debootstrap tar
@@ -192,18 +196,18 @@ jobs:
         if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true'  && ! startsWith(inputs.distro, 'alpine')}}
         run: |
           if [ -n "$ADDPKGS" ]; then
-            sudo debootstrap --no-check-gpg --foreign --arch=$ARCH --include=$ADDPKGS $DISTRO_VER $SYSROOT $MIRROR
+            sudo debootstrap --variant=minbase --no-check-gpg --arch=$ARCH --include=$ADDPKGS $DISTRO_VER $SYSROOT $MIRROR
           else
-            sudo debootstrap --no-check-gpg --foreign --arch=$ARCH $DISTRO_VER $SYSROOT $MIRROR
+            sudo debootstrap --variant=minbase --no-check-gpg --arch=$ARCH $DISTRO_VER $SYSROOT $MIRROR
           fi
 
       - name: Bootstrap sysroot (alpine targets)
         if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' && startsWith(inputs.distro, 'alpine')}}
         run: |
-          apk --no-scripts -U --allow-untrusted -X ${MIRROR} --arch $ARCH --root $SYSROOT --initdb add alpine-base
+          sudo apk -U --allow-untrusted -X ${MIRROR} --arch $ARCH --root $SYSROOT --initdb add alpine-base
 
           if [ -n "$ADDPKGS" ]; then
-            apk --no-scripts -U --allow-untrusted -X ${MIRROR} --arch $ARCH --root $SYSROOT add $(echo "$ADDPKGS" | tr ',' ' ')
+            sudo apk -U --allow-untrusted -X ${MIRROR} --arch $ARCH --root $SYSROOT add $(echo "$ADDPKGS" | tr ',' ' ')
           fi
 
       - name: Remove unused directories
