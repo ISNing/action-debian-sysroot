@@ -196,9 +196,9 @@ jobs:
         if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true'  && ! startsWith(inputs.distro, 'alpine')}}
         run: |
           if [ -n "$ADDPKGS" ]; then
-            sudo debootstrap --variant=minbase --no-check-gpg --arch=$ARCH --include=$ADDPKGS $DISTRO_VER $SYSROOT $MIRROR
+            sudo debootstrap --variant=minbase --merged-usr --no-check-gpg --arch=$ARCH --include=$ADDPKGS $DISTRO_VER $SYSROOT $MIRROR
           else
-            sudo debootstrap --variant=minbase --no-check-gpg --arch=$ARCH $DISTRO_VER $SYSROOT $MIRROR
+            sudo debootstrap --variant=minbase --merged-usr --no-check-gpg --arch=$ARCH $DISTRO_VER $SYSROOT $MIRROR
           fi
 
       - name: Bootstrap sysroot (alpine targets)
