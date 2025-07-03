@@ -145,7 +145,7 @@ jobs:
 
       - name: Set default mirror URL
         id: set_mirror
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' }}
         run: |
           if [ -z "$MIRROR" ]; then
             case "$DISTRO" in
@@ -207,6 +207,7 @@ jobs:
           fi
 
       - name: Remove unused directories
+        if: ${{ inputs.ignore_cache || steps.cache.outputs.cache-hit != 'true' }}
         working-directory: ${{ inputs.sysroot_path }}
         run: sudo rm -rf $EXCLUDE
 
