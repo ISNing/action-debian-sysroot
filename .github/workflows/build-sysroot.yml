@@ -203,7 +203,7 @@ jobs:
           apk --no-scripts -U --allow-untrusted -X ${MIRROR} --arch $ARCH --root $SYSROOT --initdb add alpine-base
 
           if [ -n "$ADDPKGS" ]; then
-            apk --no-scripts -U --allow-untrusted -X ${BASMIRRORE_URL} --arch $ARCH --root $SYSROOT add $(echo "$ADDPKGS" | tr ',' ' ')
+            apk --no-scripts -U --allow-untrusted -X ${MIRROR} --arch $ARCH --root $SYSROOT add $(echo "$ADDPKGS" | tr ',' ' ')
           fi
 
       - name: Remove unused directories
