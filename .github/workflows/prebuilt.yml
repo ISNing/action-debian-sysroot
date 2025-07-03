@@ -59,8 +59,8 @@ jobs:
       - build-debian
       - build-alpine
     steps:
-      - name: Get date
-        run: echo "DATE=$(date +"%Y%m%d")" >> $GITHUB_ENV
+      - name: Set release tag
+        run: echo "RELEASE_TAG=$(date +"%Y%m%d")-git${GITHUB_SHA:0-7}" >> $GITHUB_ENV
 
       - name: Download sysroot artifact
         uses: actions/download-artifact@v4
@@ -71,5 +71,5 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{env.DATE}}
+          tag_name: ${{env.RELEASE_TAG}}
           files: sysroot/*
