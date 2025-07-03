@@ -9,6 +9,7 @@ on:
 jobs:
   build-and-validate:
     strategy:
+      fail-fast: false
       matrix:
         params:
           - { arch: amd64, distro: debian/bullseye, add_pkg: "libc6-dev,gcc" }
