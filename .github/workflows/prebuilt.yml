@@ -32,7 +32,7 @@ jobs:
       target_arch: ${{ matrix.arch }}
       distro: ${{ matrix.distro.distro }}
       mirror_url: ${{ matrix.distro.mirror }}
-      additional_packages: "libc6-dev,gcc"
+      additional_packages: "build-essential"
       artifact_prefix: sysroot-
 
   build-alpine:
@@ -48,7 +48,7 @@ jobs:
       target_arch: ${{ matrix.arch }}
       distro: ${{ matrix.distro.distro }}
       mirror_url: ${{ matrix.distro.mirror }}
-      additional_packages: gcc
+      additional_packages: build-base
       artifact_prefix: sysroot-
 
   release:
